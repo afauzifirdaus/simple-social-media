@@ -1,0 +1,48 @@
+name: Laravel application (Mysql)
+run-name: Build, Push and Deploy image simple social media
+on:
+  push:
+    branches:
+      - main
+env:
+  IMAGE_NAME: "${{ secrets.DOCKER_USER }}/fauzifirdaus21-simple-social-media"
+  DOCKER_USER: "${{ secrets.DOCKER_USER }}"
+jobs:
+  run-mysql-in-docker:
+    runs-on: self-hosted
+    steps:
+      - name: Delete container mysql if exist
+        continue-on-error: true
+        run: docker rm -f $(docker ps -a | grep 'mysql\|social\|media' | awk '{print $1}')
+      - name: Running mysql in container
+        run:  docker run -d --name mysql -e MYSQL_ROOT_PASSWORD=password -e MYSQL_DATABASE=social_media -p 3306:3306 mysql:5.7
+      - name: List docker container
+        run: docker ps -a
+  build-push-image:
+    needs: run-mysql-in-docker
+    runs-on: self-hosted
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+      - name: Build Image
+        run: docker build -t $IMAGE_NAME .
+      - name: List Image
+        run: docker image ls
+      - name: Login to Docker Registry
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASS }}
+      - name: Push Image
+        run: docker push $IMAGE_NAME
+
+  deploy-social-media:
+    needs: build-push-image
+    runs-on: self-hosted
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+      - name: stop and remove existing container
+        run: docker compose down --rmi all
+      - name: start container
+        run: docker compose up -d

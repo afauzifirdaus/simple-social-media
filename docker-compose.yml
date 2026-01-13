@@ -1,0 +1,5 @@
+services:
+  web:
+    image: ${DOCKER_USER}/fauzifirdaus21-simple-social-media
+    ports:
+      - "8000:8000"
